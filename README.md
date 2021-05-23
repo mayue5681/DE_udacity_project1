@@ -2,6 +2,8 @@
 The goal of this project is to analyze Sparkify data (songs and user activities) on the new music streaming app, and to understand what songs users are listening to. A Postgres database and ETL pipeline is created to optimize queries on song play analysis.
 
 # Database schema design and ETL process
+![Udacity_DE_p1](Udacity_DE_p1.jpg)
+
 Relevant information from logs are extracted and a database 'sparkifydb' is created. Following tables are created:
 ### Fact Table
 songplays: records in log data associated with song plays i.e. records with page NextSong
