@@ -6,20 +6,22 @@ from sql_queries import *
 import datetime
 
 def process_song_file(cur, filepath):
-    # open song file
+    
+    ''' Extract songs in local directory, transform and load records into tables '''
+    
     df = pd.read_json(filepath, lines=True).replace({pd.np.nan: None}) 
 
-    # insert song record
     song_data = list(df[['song_id','title','artist_id','year','duration']].values[0])
     cur.execute(song_table_insert, song_data)
     
-    # insert artist record
     artist_data = list(df[['artist_id','artist_name','artist_location','artist_latitude','artist_longitude']].values[0])
     cur.execute(artist_table_insert, artist_data)
 
 
 def process_log_file(cur, filepath):
-    # open log file
+    
+    ''' Extract logs in local directory, transform and load records into tables '''
+    
     df = pd.read_json(filepath, lines=True).replace({pd.np.nan: None})
 
     # filter by NextSong action
@@ -64,18 +66,18 @@ def process_log_file(cur, filepath):
 
 
 def process_data(cur, conn, filepath, func):
-    # get all files matching extension from directory
+
+    ''' Bulk-processing JSON files using iterations '''
+    
     all_files = []
     for root, dirs, files in os.walk(filepath):
         files = glob.glob(os.path.join(root,'*.json'))
         for f in files :
             all_files.append(os.path.abspath(f))
 
-    # get total number of files found
     num_files = len(all_files)
     print('{} files found in {}'.format(num_files, filepath))
 
-    # iterate over files and process
     for i, datafile in enumerate(all_files, 1):
         func(cur, datafile)
         conn.commit()
@@ -83,6 +85,9 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
+    
+    ''' Establish connection to sparkifydb Postgres database '''   
+    
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 
