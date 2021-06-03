@@ -6,8 +6,17 @@ from sql_queries import *
 import datetime
 
 def process_song_file(cur, filepath):
-    
-    ''' Extract songs in local directory, transform and load records into tables '''
+    """
+    Description: This function is responsible for process JSON files in a directory,
+    and then insert into tables in the database.
+
+    Arguments:
+        cur: the cursor object.
+        filepath: log data or song data file path.
+
+    Returns:
+        None
+    """  
     
     df = pd.read_json(filepath, lines=True).replace({pd.np.nan: None}) 
 
@@ -19,18 +28,22 @@ def process_song_file(cur, filepath):
 
 
 def process_log_file(cur, filepath):
-    
-    ''' Extract logs in local directory, transform and load records into tables '''
+    """
+    Description: This function is responsible for process JSON files in a directory,
+    filter rows and convert data type, and then insert into tables in the database.
+
+    Arguments:
+        cur: the cursor object.
+        filepath: log data or song data file path.
+
+    Returns:
+        None
+    """    
     
     df = pd.read_json(filepath, lines=True).replace({pd.np.nan: None})
-
-    # filter by NextSong action
     df = df[df['page']=="NextSong"]
-
-    # convert timestamp column to datetime
     t = pd.to_datetime(df['ts'], unit='ms')
     
-    # insert time data records
     time_data = (t, t.dt.hour, t.dt.day, t.dt.weekofyear, t.dt.month, t.dt.year, t.dt.weekday)
     column_labels = ("start_time", "hour", "day", "week", "month", "year", "weekday")
     time_df = pd.DataFrame(dict(zip(column_labels,time_data)))
@@ -38,20 +51,15 @@ def process_log_file(cur, filepath):
     for i, row in time_df.iterrows():
         cur.execute(time_table_insert, list(row))
 
-    # load user table
     user_df = df[['userId','firstName','lastName','gender','level']].rename(
         columns={'userId': 'user_id', 
                  'firstName':'first_name', 
                  'lastName':'last_name'}).drop_duplicates()
 
-    # insert user records
     for i, row in user_df.iterrows():
         cur.execute(user_table_insert, row)
 
-    # insert songplay records
-    for index, row in df.iterrows():
-        
-        # get songid and artistid from song and artist tables
+    for index, row in df.iterrows():        
         cur.execute(song_select, (row.song, row.artist, row.length))
         results = cur.fetchone()
         
@@ -60,15 +68,26 @@ def process_log_file(cur, filepath):
         else:
             songid, artistid = None, None
 
-        # insert songplay record
         songplay_data = (datetime.datetime.fromtimestamp(row.ts/1000.0), row.userId, row.level, songid, artistid, row.sessionId, row.location, row.userAgent)
         cur.execute(songplay_table_insert, songplay_data)
 
 
 def process_data(cur, conn, filepath, func):
+    """
+    Description: This function is responsible for listing the files in a directory,
+    and then executing the ingest process for each file according to the function
+    that performs the transformation to save it to the database.
 
-    ''' Bulk-processing JSON files using iterations '''
-    
+    Arguments:
+        cur: the cursor object.
+        conn: connection to the database.
+        filepath: log data or song data file path.
+        func: function that transforms the data and inserts it into the database.
+
+    Returns:
+        None
+    """
+
     all_files = []
     for root, dirs, files in os.walk(filepath):
         files = glob.glob(os.path.join(root,'*.json'))
@@ -85,9 +104,17 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
-    
-    ''' Establish connection to sparkifydb Postgres database '''   
-    
+    """
+    Description: This function is responsible for establishing connection to the database,
+    processing files and finally close connection.
+
+    Arguments:
+        None
+
+    Returns:
+        None
+    """ 
+
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 
